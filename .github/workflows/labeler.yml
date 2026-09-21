@@ -1,0 +1,29 @@
+name: Bluesky Labeler Cron
+
+on:
+  schedule:
+    # Запуск каждые 15 минут (можешь поменять под свои нужды)
+    - cron: '*/15 * * * *'
+  # Позволяет запускать вручную из вкладки Actions
+  workflow_dispatch: 
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run labeler script
+        env:
+          BLUESKY_USER: ${{ secrets.BLUESKY_USER }}
+          BLUESKY_PASS: ${{ secrets.BLUESKY_PASS }}
+        run: node index.js

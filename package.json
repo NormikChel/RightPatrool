@@ -1,0 +1,13 @@
+{
+  "name": "bsky-right-patrol-labeler",
+  "version": "1.0.0",
+  "description": "NAFO-aligned labeler bot for Bluesky",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@atproto/api": "^0.13.0"
+  }
+}
