@@ -1,0 +1,143 @@
+// oxlint-disable no-underscore-dangle
+import { allocUnsafe as _allocUnsafe, concatArrayBuffers as _concat } from 'bun';
+import { Buffer as NodeBuffer, isUtf8 as _isUtf8 } from 'node:buffer';
+import { hash as _hash, timingSafeEqual as _timingSafeEqual } from 'node:crypto';
+const _byteLength = /*#__PURE__*/ (() => NodeBuffer.byteLength)();
+const _compare = /*#__PURE__*/ (() => NodeBuffer.prototype.compare)();
+const _equals = /*#__PURE__*/ (() => NodeBuffer.prototype.equals)();
+const _latin1Slice = /*#__PURE__*/ (() => NodeBuffer.prototype.latin1Slice)();
+const _utf8Slice = /*#__PURE__*/ (() => NodeBuffer.prototype.utf8Slice)();
+const textEncoder = new TextEncoder();
+const toUint8Array = (buffer) => {
+    return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+};
+export const alloc = (size) => {
+    return new Uint8Array(size);
+};
+export const allocUnsafe = _allocUnsafe;
+/**
+ * compares two Uint8Array buffers bytewise
+ *
+ * @param a first buffer
+ * @param b second buffer
+ * @returns -1 if `a` sorts before `b`, 1 if it sorts after, 0 if they hold the same bytes
+ */
+export const compare = (a, b) => {
+    return _compare.call(a, b);
+};
+export const equals = (a, b) => {
+    return _equals.call(a, b);
+};
+/**
+ * checks if the two Uint8Array buffers are equal, timing-safe version
+ *
+ * @param a first buffer
+ * @param b second buffer
+ * @returns whether the buffers hold the same bytes; false if their lengths differ
+ */
+export const timingSafeEquals = (a, b) => {
+    // `timingSafeEqual` throws on a length mismatch, but the length is not what we're guarding here
+    return a.length === b.length && _timingSafeEqual(a, b);
+};
+/**
+ * concatenates multiple Uint8Array buffers into one
+ *
+ * @param arrays buffers to concatenate
+ * @param size exact byte length of the result, defaulting to the combined length of `arrays`. contents
+ *   overflowing it are truncated, and any remainder past them is left zeroed
+ * @returns buffer holding the concatenated contents
+ */
+export const concat = (arrays, size) => {
+    // Bun's typings is slightly wrong, *you can* pass `size: undefined` with `asUint8Array: true`
+    const buffer = _concat(arrays, size, true);
+    // `concatArrayBuffers` treats `size` as a cap and stops at the last chunk, so an underfilled
+    // result comes back short instead of zero-padded out to `size`
+    if (size !== undefined && buffer.length < size) {
+        const padded = new Uint8Array(size);
+        padded.set(buffer);
+        return padded;
+    }
+    return buffer;
+};
+export const encodeUtf8 = textEncoder.encode.bind(textEncoder);
+export const encodeUtf8Into = (to, str, offset, length) => {
+    let buffer;
+    if (offset === undefined) {
+        buffer = to;
+    }
+    else if (length === undefined) {
+        buffer = to.subarray(offset);
+    }
+    else {
+        buffer = to.subarray(offset, offset + length);
+    }
+    const result = textEncoder.encodeInto(str, buffer);
+    return result.written;
+};
+/**
+ * decodes a UTF-8 string from a given buffer
+ *
+ * @param from source buffer
+ * @param offset byte offset to start reading from
+ * @param length number of bytes to read
+ * @returns decoded string
+ * @throws {TypeError} if the byte range is not well-formed UTF-8
+ */
+export const decodeUtf8From = (from, offset = 0, length = from.length - offset) => {
+    if (length <= 24) {
+        let acc = 0;
+        for (let i = 0; i < length; i++) {
+            acc |= from[offset + i];
+        }
+        if ((acc & 0x80) === 0) {
+            return _latin1Slice.call(from, offset, offset + length);
+        }
+    }
+    const string = _utf8Slice.call(from, offset, offset + length);
+    if (string.includes('\ufffd') && !_isUtf8(from.subarray(offset, offset + length))) {
+        throw new TypeError(`input is not valid utf-8`);
+    }
+    return string;
+};
+/**
+ * calculates the UTF-8 byte length of a string
+ *
+ * @param str string to measure
+ * @returns byte length when encoded as UTF-8
+ */
+export const getUtf8Length = (str) => {
+    return _byteLength(str, 'utf8');
+};
+/**
+ * checks if a string's UTF-8 byte length is within a given range
+ *
+ * @param str string to measure
+ * @param min minimum byte length (inclusive)
+ * @param max maximum byte length (inclusive)
+ * @returns true if byte length is within [min, max]
+ */
+export const isUtf8LengthInRange = (str, min, max) => {
+    const len = str.length;
+    // fast path: if max possible UTF-8 length is below min, fail
+    if (len * 3 < min) {
+        return false;
+    }
+    // fast path: if UTF-16 length satisfies min and max possible satisfies max
+    if (len >= min && len * 3 <= max) {
+        return true;
+    }
+    const utf8len = _byteLength(str, 'utf8');
+    return utf8len >= min && utf8len <= max;
+};
+export const toSha256 = async (buffer) => {
+    return toUint8Array(_hash('sha256', buffer, 'buffer'));
+};
+/**
+ * generates cryptographically secure random bytes
+ *
+ * @param size number of bytes to generate
+ * @returns buffer filled with random bytes
+ */
+export const randomBytes = (size) => {
+    return crypto.getRandomValues(new Uint8Array(size));
+};

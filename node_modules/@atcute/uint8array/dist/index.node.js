@@ -1,0 +1,323 @@
+// oxlint-disable no-underscore-dangle
+import { Buffer as NodeBuffer, isUtf8 as _isUtf8 } from 'node:buffer';
+import { hash as _hash, randomFillSync as _randomFillSync, timingSafeEqual as _timingSafeEqual, } from 'node:crypto';
+const _alloc = /*#__PURE__*/ (() => NodeBuffer.alloc)();
+const _allocUnsafe = /*#__PURE__*/ (() => NodeBuffer.allocUnsafe)();
+const _concat = /*#__PURE__*/ (() => NodeBuffer.concat)();
+const _from = /*#__PURE__*/ (() => NodeBuffer.from)();
+const _byteLength = /*#__PURE__*/ (() => NodeBuffer.byteLength)();
+const _compare = /*#__PURE__*/ (() => NodeBuffer.prototype.compare)();
+const _equals = /*#__PURE__*/ (() => NodeBuffer.prototype.equals)();
+const _utf8Slice = /*#__PURE__*/ (() => NodeBuffer.prototype.utf8Slice)();
+const _utf8Write = /*#__PURE__*/ (() => NodeBuffer.prototype.utf8Write)();
+const toUint8Array = (buffer) => {
+    return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+};
+export const alloc = (size) => {
+    return toUint8Array(_alloc(size));
+};
+export const allocUnsafe = (size) => {
+    return toUint8Array(_allocUnsafe(size));
+};
+/**
+ * compares two Uint8Array buffers bytewise
+ *
+ * @param a first buffer
+ * @param b second buffer
+ * @returns -1 if `a` sorts before `b`, 1 if it sorts after, 0 if they hold the same bytes
+ */
+export const compare = (a, b) => {
+    return _compare.call(a, b);
+};
+export const equals = (a, b) => {
+    return _equals.call(a, b);
+};
+/**
+ * checks if the two Uint8Array buffers are equal, timing-safe version
+ *
+ * @param a first buffer
+ * @param b second buffer
+ * @returns whether the buffers hold the same bytes; false if their lengths differ
+ */
+export const timingSafeEquals = (a, b) => {
+    // `timingSafeEqual` throws on a length mismatch, but the length is not what we're guarding here
+    return a.length === b.length && _timingSafeEqual(a, b);
+};
+/**
+ * concatenates multiple Uint8Array buffers into one
+ *
+ * @param arrays buffers to concatenate
+ * @param size exact byte length of the result, defaulting to the combined length of `arrays`. contents
+ *   overflowing it are truncated, and any remainder past them is left zeroed
+ * @returns buffer holding the concatenated contents
+ */
+export const concat = (arrays, size) => {
+    // `Buffer.concat` short-circuits an empty list to a zero-length buffer, ignoring `size`
+    if (size !== undefined && arrays.length === 0) {
+        return alloc(size);
+    }
+    return toUint8Array(_concat(arrays, size));
+};
+export const encodeUtf8 = (str) => {
+    return toUint8Array(_from(str, 'utf8'));
+};
+export const encodeUtf8Into = (to, str, offset, length) => {
+    return _utf8Write.call(to, str, offset, length);
+};
+const _fromCharCode = String.fromCharCode;
+// fully unrolled short string decoder, inspired by cbor-x
+// returns null if non-ASCII byte encountered, signaling fallback to utf8Slice
+const _shortString = (from, ptr, length) => {
+    if (length < 4) {
+        if (length < 2) {
+            if (length === 0) {
+                return '';
+            }
+            const a = from[ptr];
+            if (a & 0x80) {
+                return null;
+            }
+            return _fromCharCode(a);
+        }
+        const a = from[ptr];
+        const b = from[ptr + 1];
+        if ((a | b) & 0x80) {
+            return null;
+        }
+        if (length === 2) {
+            return _fromCharCode(a, b);
+        }
+        const c = from[ptr + 2];
+        if (c & 0x80) {
+            return null;
+        }
+        return _fromCharCode(a, b, c);
+    }
+    const a = from[ptr];
+    const b = from[ptr + 1];
+    const c = from[ptr + 2];
+    const d = from[ptr + 3];
+    if ((a | b | c | d) & 0x80) {
+        return null;
+    }
+    if (length < 8) {
+        if (length === 4) {
+            return _fromCharCode(a, b, c, d);
+        }
+        const e = from[ptr + 4];
+        if (e & 0x80) {
+            return null;
+        }
+        if (length === 5) {
+            return _fromCharCode(a, b, c, d, e);
+        }
+        const f = from[ptr + 5];
+        if (f & 0x80) {
+            return null;
+        }
+        if (length === 6) {
+            return _fromCharCode(a, b, c, d, e, f);
+        }
+        const g = from[ptr + 6];
+        if (g & 0x80) {
+            return null;
+        }
+        return _fromCharCode(a, b, c, d, e, f, g);
+    }
+    const e = from[ptr + 4];
+    const f = from[ptr + 5];
+    const g = from[ptr + 6];
+    const h = from[ptr + 7];
+    if ((e | f | g | h) & 0x80) {
+        return null;
+    }
+    if (length < 12) {
+        if (length === 8) {
+            return _fromCharCode(a, b, c, d, e, f, g, h);
+        }
+        const i = from[ptr + 8];
+        if (i & 0x80) {
+            return null;
+        }
+        if (length === 9) {
+            return _fromCharCode(a, b, c, d, e, f, g, h, i);
+        }
+        const j = from[ptr + 9];
+        if (j & 0x80) {
+            return null;
+        }
+        if (length === 10) {
+            return _fromCharCode(a, b, c, d, e, f, g, h, i, j);
+        }
+        const k = from[ptr + 10];
+        if (k & 0x80) {
+            return null;
+        }
+        return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k);
+    }
+    const i = from[ptr + 8];
+    const j = from[ptr + 9];
+    const k = from[ptr + 10];
+    const l = from[ptr + 11];
+    if ((i | j | k | l) & 0x80) {
+        return null;
+    }
+    if (length < 16) {
+        if (length === 12) {
+            return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l);
+        }
+        const m = from[ptr + 12];
+        if (m & 0x80) {
+            return null;
+        }
+        if (length === 13) {
+            return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m);
+        }
+        const n = from[ptr + 13];
+        if (n & 0x80) {
+            return null;
+        }
+        if (length === 14) {
+            return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n);
+        }
+        const o = from[ptr + 14];
+        if (o & 0x80) {
+            return null;
+        }
+        return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o);
+    }
+    const m = from[ptr + 12];
+    const n = from[ptr + 13];
+    const o = from[ptr + 14];
+    const p = from[ptr + 15];
+    if ((m | n | o | p) & 0x80) {
+        return null;
+    }
+    if (length < 20) {
+        if (length === 16) {
+            return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p);
+        }
+        const q = from[ptr + 16];
+        if (q & 0x80) {
+            return null;
+        }
+        if (length === 17) {
+            return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q);
+        }
+        const r = from[ptr + 17];
+        if (r & 0x80) {
+            return null;
+        }
+        if (length === 18) {
+            return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r);
+        }
+        const s = from[ptr + 18];
+        if (s & 0x80) {
+            return null;
+        }
+        return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s);
+    }
+    const q = from[ptr + 16];
+    const r = from[ptr + 17];
+    const s = from[ptr + 18];
+    const t = from[ptr + 19];
+    if ((q | r | s | t) & 0x80) {
+        return null;
+    }
+    if (length < 24) {
+        if (length === 20) {
+            return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t);
+        }
+        const u = from[ptr + 20];
+        if (u & 0x80) {
+            return null;
+        }
+        if (length === 21) {
+            return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u);
+        }
+        const v = from[ptr + 21];
+        if (v & 0x80) {
+            return null;
+        }
+        if (length === 22) {
+            return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v);
+        }
+        const w = from[ptr + 22];
+        if (w & 0x80) {
+            return null;
+        }
+        return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w);
+    }
+    const u = from[ptr + 20];
+    const v = from[ptr + 21];
+    const w = from[ptr + 22];
+    const x = from[ptr + 23];
+    if ((u | v | w | x) & 0x80) {
+        return null;
+    }
+    return _fromCharCode(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x);
+};
+/**
+ * decodes a UTF-8 string from a given buffer
+ *
+ * @param from source buffer
+ * @param offset byte offset to start reading from
+ * @param length number of bytes to read
+ * @returns decoded string
+ * @throws {TypeError} if the byte range is not well-formed UTF-8
+ */
+export const decodeUtf8From = (from, offset = 0, length = from.length - offset) => {
+    if (length <= 24) {
+        const result = _shortString(from, offset, length);
+        if (result !== null) {
+            return result;
+        }
+    }
+    const string = _utf8Slice.call(from, offset, offset + length);
+    if (string.includes('\ufffd') && !_isUtf8(from.subarray(offset, offset + length))) {
+        throw new TypeError(`input is not valid utf-8`);
+    }
+    return string;
+};
+/**
+ * calculates the UTF-8 byte length of a string
+ *
+ * @param str string to measure
+ * @returns byte length when encoded as UTF-8
+ */
+export const getUtf8Length = (str) => {
+    return _byteLength(str, 'utf8');
+};
+/**
+ * checks if a string's UTF-8 byte length is within a given range
+ *
+ * @param str string to measure
+ * @param min minimum byte length (inclusive)
+ * @param max maximum byte length (inclusive)
+ * @returns true if byte length is within [min, max]
+ */
+export const isUtf8LengthInRange = (str, min, max) => {
+    const len = str.length;
+    // fast path: if max possible UTF-8 length is below min, fail
+    if (len * 3 < min) {
+        return false;
+    }
+    // fast path: if UTF-16 length satisfies min and max possible satisfies max
+    if (len >= min && len * 3 <= max) {
+        return true;
+    }
+    const utf8len = _byteLength(str, 'utf8');
+    return utf8len >= min && utf8len <= max;
+};
+export const toSha256 = async (buffer) => {
+    return toUint8Array(_hash('sha256', buffer, 'buffer'));
+};
+/**
+ * generates cryptographically secure random bytes
+ *
+ * @param size number of bytes to generate
+ * @returns buffer filled with random bytes
+ */
+export const randomBytes = (size) => {
+    return _randomFillSync(toUint8Array(_allocUnsafe(size)));
+};

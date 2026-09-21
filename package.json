@@ -8,6 +8,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "@atproto/api": "^0.13.0"
+    "@atproto/api": "^0.13.0",
+    "@skyware/labeler": "^0.2.0"
   }
 }
